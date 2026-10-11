@@ -1,0 +1,6 @@
+node_modules/
+data/db.json
+data/db.bak.json
+data/archive/
+data/*.tmp
+public/payment-qr.png

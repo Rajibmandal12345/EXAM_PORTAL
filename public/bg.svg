@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+<defs>
+<linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#071a3d"/><stop offset=".55" stop-color="#12306a"/><stop offset="1" stop-color="#0a2150"/></linearGradient>
+<radialGradient id="o" cx=".88" cy=".08" r=".5"><stop offset="0" stop-color="#e8821a" stop-opacity=".45"/><stop offset="1" stop-color="#e8821a" stop-opacity="0"/></radialGradient>
+<radialGradient id="b" cx=".1" cy=".95" r=".55"><stop offset="0" stop-color="#3b82f6" stop-opacity=".35"/><stop offset="1" stop-color="#3b82f6" stop-opacity="0"/></radialGradient>
+<pattern id="d" width="34" height="34" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.4" fill="#fff" opacity=".10"/></pattern>
+</defs>
+<rect width="1600" height="900" fill="url(#g)"/><rect width="1600" height="900" fill="url(#d)"/>
+<rect width="1600" height="900" fill="url(#o)"/><rect width="1600" height="900" fill="url(#b)"/>
+<g fill="none" stroke="#fff" opacity=".07" stroke-width="2"><circle cx="1350" cy="150" r="260"/><circle cx="1350" cy="150" r="340"/><circle cx="1350" cy="150" r="420"/><circle cx="200" cy="820" r="230"/><circle cx="200" cy="820" r="310"/></g>
+<g fill="#fff" opacity=".07" font-family="Georgia,'Times New Roman',serif" font-style="italic">
+<text x="90" y="150" font-size="84">∫ x² dx</text><text x="520" y="90" font-size="60">E = mc²</text><text x="1120" y="470" font-size="76">Σ  π  √</text>
+<text x="640" y="800" font-size="70">H₂O  CO₂</text><text x="1260" y="800" font-size="64">F = ma</text><text x="60" y="520" font-size="64">sin²θ + cos²θ = 1</text></g>
+<g opacity=".08" fill="#fff" transform="translate(1180 560) scale(1.5)"><polygon points="120,0 240,50 120,100 0,50"/><path d="M45 78 v52 c0 18 150 18 150 0 v-52 l-75 32z"/><rect x="226" y="52" width="6" height="70"/><circle cx="229" cy="128" r="9"/></g>
+</svg>

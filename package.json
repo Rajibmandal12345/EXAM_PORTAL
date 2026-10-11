@@ -1,0 +1,17 @@
+{
+  "name": "wbjee-exam-portal",
+  "version": "1.0.0",
+  "description": "WBJEE-style online exam portal (zero dependencies, runs on Node.js)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/loadtest.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  }
+}

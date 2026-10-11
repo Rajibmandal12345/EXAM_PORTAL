@@ -1,0 +1,71 @@
+[Mathematics][1]
+The sum of the roots of x^2 - 5x + 6 = 0 is
+A) 6
+B) 5
+C) -5
+D) 1
+Answer: B
+
+[Mathematics][2]
+The value of the integral of 2x dx from 0 to 1 is
+A) 0
+B) 2
+C) 1
+D) 1/2
+Answer: C
+
+[Mathematics][3]
+Which of the following numbers are prime?
+A) 2
+B) 9
+C) 11
+D) 15
+Answer: A,C
+
+[Physics][1]
+The SI unit of force is
+A) Joule
+B) Newton
+C) Watt
+D) Pascal
+Answer: B
+
+[Physics][2]
+A body of mass 2 kg has an acceleration of 3 m/s^2. The net force on it is
+A) 1.5 N
+B) 5 N
+C) 6 N
+D) 9 N
+Answer: C
+
+[Physics][3]
+Which of the following are vector quantities?
+A) Velocity
+B) Speed
+C) Force
+D) Mass
+Answer: A,C
+
+[Chemistry][1]
+The atomic number of carbon is
+A) 12
+B) 6
+C) 8
+D) 14
+Answer: B
+
+[Chemistry][2]
+The pH of a 0.01 M solution of HCl is
+A) 1
+B) 12
+C) 2
+D) 7
+Answer: C
+
+[Chemistry][3]
+Which of the following are noble gases?
+A) Neon
+B) Oxygen
+C) Argon
+D) Nitrogen
+Answer: A,C
