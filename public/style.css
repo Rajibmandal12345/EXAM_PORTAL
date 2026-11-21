@@ -41,7 +41,7 @@ table{width:100%;border-collapse:collapse;font-size:.92rem}th,td{text-align:left
 ul.rules{padding-left:20px;margin:6px 0}ul.rules li{margin:4px 0}
 /* ---- professional landing / registration ---- */
 .card{color:var(--tx)}
-body.bgpage{background:linear-gradient(rgba(7,22,52,.56),rgba(7,22,52,.70)),url(/prayas-academy-bg.png) center/cover fixed no-repeat;color:#fff}
+body.bgpage{background:linear-gradient(rgba(7,22,52,.84),rgba(7,22,52,.88)),url(/prayas-academy-bg.png) center/cover fixed no-repeat;color:#fff}
 body.bgpage .top{background:rgba(7,22,52,.6);backdrop-filter:blur(6px);border-bottom:1px solid rgba(255,255,255,.12)}
 .hero{display:grid;grid-template-columns:1.1fr .9fr;gap:34px;align-items:center;max-width:1100px;margin:0 auto;padding:36px 18px;min-height:calc(100vh - 130px)}
 @media(max-width:860px){.hero{grid-template-columns:1fr;padding:18px 12px}.heroL h1{font-size:1.8rem!important}}
