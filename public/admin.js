@@ -2,7 +2,7 @@
 const app = document.getElementById('app'), L = 'ABCD';
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 let token = sessionStorage.getItem('wb_admin'), tab = 'dash', ov = null, questions = [], editId = null, resourceEdit = null, resourceCategories = {}, resources = [], timer = null;
-const topbar = right => `<div class="top"><div><div class="brand">WBJEE <span>Admin Panel</span></div><div class="sub">${ov ? esc(ov.settings.title) : ''}</div></div><div class="row">${right || ''}</div></div>`;
+const topbar = right => `<div class="top"><div><div class="brand">PRAYAS <span>ACADEMY · Admin</span></div><div class="sub">${ov ? esc(ov.settings.title) : ''}</div></div><div class="row">${right || ''}</div></div>`;
 
 async function api(path, method = 'GET', body, raw) {
   const r = await fetch(path, { method, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (token || '') }, body: body ? JSON.stringify(body) : undefined });

@@ -2,7 +2,7 @@
 const app = document.getElementById('app'), L = 'ABCD';
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return [Math.floor(s / 3600), Math.floor(s % 3600 / 60), s % 60].map(n => String(n).padStart(2, '0')).join(':'); };
-const topbar = (right = '') => `<div class="top"><div><div class="brand">WBJEE <span>Online Exam</span></div><div class="sub">West Bengal Joint Entrance Examination – practice portal</div></div><div class="row">${right}</div></div>`;
+const topbar = (right = '') => `<div class="top"><div><div class="brand">PRAYAS <span>ACADEMY</span></div><div class="sub">WBJEE · JEE preparation and practice portal</div></div><div class="row">${right}</div></div>`;
 let token = localStorage.getItem('wb_token'), me = null, paper = null, qs = [], cur = 0, answers = {}, review = {}, visited = {}, deadline = 0, pending = {}, net = true, timers = [], finishing = false, publicResources = [], resourceCategories = {};
 
 async function api(path, method = 'GET', body) {
@@ -18,13 +18,13 @@ const stopTimers = () => { timers.forEach(clearInterval); timers = []; };
 /* ---------- login / register (details -> payment/passkey) ---------- */
 async function showLogin(msg) {
   stopTimers(); document.body.className = 'bgpage'; qs = [];
-  let pub = { title: 'WBJEE Online Exam', payment: { enabled: false, fee: 0, mode: 'manual' } };
+  let pub = { title: 'Prayas Academy', payment: { enabled: false, fee: 0, mode: 'manual' } };
   try { pub = await api('/api/public'); } catch (e) {}
   const pay = pub.payment; let step = 1, method = 'utr', d = { name: '', phone: '', father: '', school: '' }, err = msg || '';
   const hero = inner => `${topbar()}<div class="hero"><div class="heroL"><span class="badge">WBJEE · PRACTICE &amp; MOCK TESTS</span><h1>${esc(pub.title)}</h1>
     <p>A realistic computer-based exam experience for West Bengal Joint Entrance Examination aspirants.</p>
     <ul class="feat"><li>Real WBJEE marking scheme with Category 1, 2 and 3 questions</li><li>Subject-wise palette, mark for review and auto-save</li><li>Server-timed exam with automatic submission</li><li>Secure registration – one candidate, one attempt</li></ul></div>
-    <div class="heroR"><div class="card">${inner}</div></div></div><div class="foot">© ${new Date().getFullYear()} WBJEE Online Exam Portal</div>`;
+    <div class="heroR"><div class="card">${inner}</div></div></div><div class="foot">© ${new Date().getFullYear()} Prayas Academy · WBJEE &amp; JEE preparation</div>`;
   const stepper = () => pay.enabled ? `<div class="steps"><span class="${step === 1 ? 'on' : 'dn'}">1 · Details</span><span class="${step === 2 ? 'on' : ''}">2 · Payment / Passkey</span><span>3 · Start exam</span></div>` : '';
   const draw = () => {
     if (step === 1) app.innerHTML = hero(`${stepper()}<h1>Candidate Registration</h1><p class="mu">Enter your details exactly. If your browser closes during the exam, enter the same phone number and father's name to resume.</p>
