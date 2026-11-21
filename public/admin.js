@@ -1,7 +1,7 @@
 'use strict';
 const app = document.getElementById('app'), L = 'ABCD';
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-let token = sessionStorage.getItem('wb_admin'), tab = 'dash', ov = null, questions = [], editId = null, timer = null;
+let token = sessionStorage.getItem('wb_admin'), tab = 'dash', ov = null, questions = [], editId = null, resourceEdit = null, resourceCategories = {}, resources = [], timer = null;
 const topbar = right => `<div class="top"><div><div class="brand">WBJEE <span>Admin Panel</span></div><div class="sub">${ov ? esc(ov.settings.title) : ''}</div></div><div class="row">${right || ''}</div></div>`;
 
 async function api(path, method = 'GET', body, raw) {
@@ -26,13 +26,13 @@ async function load() {
 }
 function render() {
   const st = ov.settings.status;
-  app.innerHTML = topbar(`<span class="tag ${st}">${st.toUpperCase()}</span><button id="lo">Log out</button>`) + `<div class="wrap"><div class="tabs">${[['dash', 'Dashboard'], ['q', 'Questions'], ['set', 'Settings'], ['pay', 'Payments' + (ov.payCounts.pending ? ' (' + ov.payCounts.pending + ')' : '')], ['stu', 'Students & Results']].map(([k, n]) => `<button class="${tab === k ? 'on' : ''}" data-tab="${k}">${n}</button>`).join('')}</div><div id="body"></div></div>`;
+  app.innerHTML = topbar(`<span class="tag ${st}">${st.toUpperCase()}</span><button id="lo">Log out</button>`) + `<div class="wrap"><div class="tabs">${[['dash', 'Dashboard'], ['q', 'Questions'], ['resources', 'Resources'], ['set', 'Settings'], ['pay', 'Payments' + (ov.payCounts.pending ? ' (' + ov.payCounts.pending + ')' : '')], ['stu', 'Students & Results']].map(([k, n]) => `<button class="${tab === k ? 'on' : ''}" data-tab="${k}">${n}</button>`).join('')}</div><div id="body"></div></div>`;
   document.getElementById('lo').onclick = () => { token = null; sessionStorage.removeItem('wb_admin'); showLogin(); };
   renderBody();
 }
 async function renderBody() {
   const b = document.getElementById('body'); if (!b) return;
-  if (tab === 'dash') b.innerHTML = dash(); else if (tab === 'q') { await loadQs(); b.innerHTML = qpage(); } else if (tab === 'set') b.innerHTML = setpage(); else if (tab === 'pay') { b.innerHTML = payShell(); refreshStudents(); } else { b.innerHTML = stuShell(); refreshStudents(); }
+  if (tab === 'dash') b.innerHTML = dash(); else if (tab === 'q') { await loadQs(); b.innerHTML = qpage(); } else if (tab === 'resources') { await loadResources(); b.innerHTML = resourcePage(); } else if (tab === 'set') b.innerHTML = setpage(); else if (tab === 'pay') { b.innerHTML = payShell(); refreshStudents(); } else { b.innerHTML = stuShell(); refreshStudents(); }
 }
 function dash() {
   const c = ov.counts, st = ov.settings.status;
@@ -67,6 +67,35 @@ function readForm() {
   const o = [0, 1, 2, 3].map(j => document.getElementById('qo' + j).value), ch = [0, 1, 2, 3].filter(j => document.getElementById('qc' + j).checked), type = +document.getElementById('qt').value;
   if (type !== 3 && ch.length !== 1) throw new Error('Tick exactly one correct option for category ' + type);
   return { subject: document.getElementById('qs').value, type, q: document.getElementById('qq').value, o, a: type === 3 ? ch : ch[0] };
+}
+/* ----- admin resources ----- */
+async function loadResources() {
+  const r = await api('/api/admin/resources'); resourceCategories = r.categories; resources = r.resources;
+}
+function resourcePage() {
+  const e = resources.find(x => x.id === resourceEdit) || { category: 'study', title: '', content: '', link: '', pdfName: '' };
+  return `<div class="card"><h2>${resourceEdit ? 'Edit published resource' : 'Add a resource for students'}</h2>
+  <div class="row"><div style="flex:1;min-width:220px"><label>Section<select id="rc">${Object.entries(resourceCategories).map(([k,n]) => `<option value="${esc(k)}" ${e.category === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label></div>
+  <div style="flex:2;min-width:220px"><label>Title<input id="rt" maxlength="100" value="${esc(e.title)}"></label></div></div>
+  <label>Text / guidelines / college details<textarea id="rtext" rows="8" maxlength="12000" placeholder="Write instructions, admission details, college information, stream benefits…">${esc(e.content)}</textarea></label>
+  <label>Website or college link<input id="rlink" type="url" maxlength="500" value="${esc(e.link)}" placeholder="https://..."></label>
+  <label>PDF upload (maximum 5 MB)<input id="rpdf" type="file" accept="application/pdf,.pdf"></label>
+  ${e.pdfName ? `<p class="mu">Current PDF: <b>${esc(e.pdfName)}</b><label style="display:inline-flex;gap:8px;margin-left:12px"><input id="rrmpdf" type="checkbox" style="width:auto"> Remove current PDF</label></p>` : ''}
+  <p class="err" id="rerr"></p><div class="row"><button class="p" data-a="rsave">${resourceEdit ? 'Update resource' : 'Publish resource'}</button>${resourceEdit ? '<button data-a="rcancel">Cancel edit</button>' : ''}</div></div>
+  <div class="card"><h2>Published resources (${resources.length})</h2>${['study','admission','careers'].map(cat => {
+    const list = resources.filter(r => r.category === cat);
+    return `<h3 style="margin:12px 0 6px">${esc(resourceCategories[cat] || cat)}</h3>${list.map(r => `<div class="resource-admin"><div><b>${esc(r.title)}</b><p class="mu">${esc(r.content).slice(0,180)}${r.content.length > 180 ? '…' : ''}</p>${r.link ? `<div><a href="${esc(r.link)}" target="_blank" rel="noopener">${esc(r.link)}</a></div>` : ''}${r.pdfName ? `<div class="mu">PDF: ${esc(r.pdfName)}</div>` : ''}</div><div class="row"><button data-resource-edit="${esc(r.id)}">Edit</button><button class="d" data-resource-delete="${esc(r.id)}">Delete</button></div></div>`).join('') || '<p class="mu">Nothing published yet.</p>'}`;
+  }).join('')}</div>`;
+}
+async function readResourcePdf() {
+  const input = document.getElementById('rpdf'); if (!input || !input.files || !input.files[0]) return null;
+  const file = input.files[0];
+  if (file.size > 5 * 1024 * 1024) throw new Error('PDF must be 5 MB or smaller.');
+  if (!file.name.toLowerCase().endsWith('.pdf')) throw new Error('Choose a PDF file.');
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = ''; bytes.forEach(b => binary += String.fromCharCode(b));
+  if (binary.slice(0, 5) !== '%PDF-') throw new Error('This file is not a valid PDF.');
+  return { pdfData: btoa(binary), pdfName: file.name };
 }
 /* ----- settings ----- */
 function setpage() {
@@ -123,6 +152,8 @@ app.addEventListener('click', e => {
     if (t.dataset.prej) { const why = prompt('Reason shown to the student (optional):', 'Payment not found. Please re-submit the correct UTR.'); if (why !== null) { await api('/api/admin/pay-reject', 'POST', { phone: t.dataset.prej, reason: why }); await refreshAll(); } return; }
     if (t.dataset.pkdel) { if (confirm('Delete this passkey?')) { await api('/api/admin/passkey-delete', 'POST', { code: t.dataset.pkdel }); await refreshAll(); } return; }
     if (t.dataset.delstu) { if (confirm('Permanently DELETE this student and their result?\n\nDownload the CSV first if you still need it.')) { await api('/api/admin/student-delete', 'POST', { phone: t.dataset.delstu }); await refreshAll(); } return; }
+    if (t.dataset.resourceEdit) { resourceEdit = t.dataset.resourceEdit; await renderBody(); window.scrollTo(0, 0); return; }
+    if (t.dataset.resourceDelete) { if (confirm('Delete this published resource?')) { await api('/api/admin/resources/' + t.dataset.resourceDelete, 'DELETE'); resourceEdit = null; await refreshAll(); } return; }
     if (t.dataset.reset) { if (confirm('Reset this student? Their answers and result will be erased so they can retake.')) { await api('/api/admin/student-reset', 'POST', { phone: t.dataset.reset }); await refreshStudents(); } return; }
     if (a === 'open') { if (confirm('Open the exam? Students can start immediately.')) { await api('/api/admin/status', 'POST', { status: 'open' }); await refreshAll(); } }
     else if (a === 'close') { if (confirm('Close the exam? Every student still writing will be auto-submitted now.')) { await api('/api/admin/status', 'POST', { status: 'closed' }); await refreshAll(); } }
@@ -140,6 +171,16 @@ app.addEventListener('click', e => {
     else if (a === 'pkadd') { await api('/api/admin/passkey', 'POST', { code: document.getElementById('pkc').value, limit: +document.getElementById('pkl').value || 0 }); await refreshAll(); }
     else if (a === 'sample') { await api('/api/admin/sample', 'POST'); await refreshAll(); }
     else if (a === 'clearq') { if (confirm('Delete ALL questions?')) { await api('/api/admin/clear-questions', 'POST'); await refreshAll(); } }
+    else if (a === 'rcancel') { resourceEdit = null; renderBody(); }
+    else if (a === 'rsave') {
+      try {
+        const pdf = await readResourcePdf();
+        const body = { category: document.getElementById('rc').value, title: document.getElementById('rt').value, content: document.getElementById('rtext').value, link: document.getElementById('rlink').value, removePdf: !!(document.getElementById('rrmpdf') && document.getElementById('rrmpdf').checked) };
+        if (pdf) Object.assign(body, pdf);
+        if (resourceEdit) await api('/api/admin/resources/' + resourceEdit, 'PUT', body); else await api('/api/admin/resources', 'POST', body);
+        resourceEdit = null; await refreshAll();
+      } catch (er) { document.getElementById('rerr').textContent = er.message; }
+    }
     else if (a === 'dlclear') {
       if (prompt('This downloads the results CSV, then DELETES all students and results from the database.\nType DELETE to confirm.') !== 'DELETE') return;
       await downloadCsv(); const r = await api('/api/admin/clear-students', 'POST', { confirm: 'DELETE' }); await refreshAll();

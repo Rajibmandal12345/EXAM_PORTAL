@@ -3,7 +3,7 @@ const app = document.getElementById('app'), L = 'ABCD';
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return [Math.floor(s / 3600), Math.floor(s % 3600 / 60), s % 60].map(n => String(n).padStart(2, '0')).join(':'); };
 const topbar = (right = '') => `<div class="top"><div><div class="brand">WBJEE <span>Online Exam</span></div><div class="sub">West Bengal Joint Entrance Examination – practice portal</div></div><div class="row">${right}</div></div>`;
-let token = localStorage.getItem('wb_token'), me = null, paper = null, qs = [], cur = 0, answers = {}, review = {}, visited = {}, deadline = 0, pending = {}, net = true, timers = [], finishing = false;
+let token = localStorage.getItem('wb_token'), me = null, paper = null, qs = [], cur = 0, answers = {}, review = {}, visited = {}, deadline = 0, pending = {}, net = true, timers = [], finishing = false, publicResources = [], resourceCategories = {};
 
 async function api(path, method = 'GET', body) {
   let r;
@@ -70,10 +70,35 @@ async function route() {
   try { me = await api('/api/me'); } catch (e) { if (e.net) { app.innerHTML = topbar() + '<div class="narrow"><div class="card"><h1>Cannot reach the exam server</h1><p class="mu">Check your Wi-Fi connection. Retrying…</p></div></div>'; setTimeout(route, 3000); } return; }
   if (me.submitted) return showDone();
   if (me.started) return resume();
-  showLobby();
+  showStudentDashboard();
 }
 async function resume() { try { startExam(await api('/api/paper')); } catch (e) { route(); } }
 
+/* ---------- student dashboard ---------- */
+async function showStudentDashboard() {
+  document.body.className = 'bgpage';
+  try { const r = await api('/api/resources'); publicResources = r.resources || []; resourceCategories = r.categories || {}; } catch (e) { publicResources = []; }
+  const cards = [
+    ['exam', 'Take Exam', 'Take the mock exam created by the admin', 'Start or resume the WBJEE exam'],
+    ['study', 'Study Guidelines & Study Materials', 'Preparation plans and downloadable resources', 'View guidelines, books and PDFs'],
+    ['admission', 'After WBJEE Admission Guidelines', 'College, counselling and admission information', 'View colleges, dates and admission steps'],
+    ['careers', 'Future of Engineering', 'Explore streams and career benefits', 'View engineering streams and opportunities']
+  ];
+  app.innerHTML = topbar(`<span class="sub">${esc(me.name)} · ${esc(me.phone)}</span><button id="lo">Log out</button>`) + `<div class="wrap dashboard"><div class="dashboard-head"><div><span class="badge">STUDENT DASHBOARD</span><h1>Welcome, ${esc(me.name)}</h1><p class="mu">Choose a section below. Admin-published information appears instantly for every student.</p></div></div>
+    <div class="feature-grid">${cards.map(([id,title,sub,action]) => `<button class="feature-card feature-${id}" data-feature="${id}"><span class="feature-icon">${id === 'exam' ? '📝' : id === 'study' ? '📚' : id === 'admission' ? '🎓' : '🚀'}</span><span><b>${esc(title)}</b><small>${esc(sub)}</small><em>${esc(action)} →</em></span></button>`).join('')}</div>
+    <div id="resource-view"></div>
+  </div>`;
+  document.getElementById('lo').onclick = () => { token = null; localStorage.removeItem('wb_token'); showLogin(); };
+  app.querySelectorAll('[data-feature]').forEach(b => b.onclick = () => b.dataset.feature === 'exam' ? showLobby() : showResourceSection(b.dataset.feature));
+}
+function showResourceSection(category) {
+  const box = document.getElementById('resource-view'); if (!box) return;
+  const title = resourceCategories[category] || (category === 'careers' ? 'Future of Engineering' : category);
+  const list = publicResources.filter(r => r.category === category);
+  box.innerHTML = `<div class="card resource-view-card"><div class="row sp"><h2>${esc(title)}</h2><button data-a="close-resources">Close</button></div>${list.map(r => `<article class="resource-entry"><h3>${esc(r.title)}</h3>${r.content ? `<div class="resource-text">${esc(r.content).replace(/\n/g, '<br>')}</div>` : ''}${r.link ? `<p><a href="${esc(r.link)}" target="_blank" rel="noopener">Open website / college link →</a></p>` : ''}${r.pdfUrl ? `<p><a class="resource-download" href="${esc(r.pdfUrl)}">⬇ Download ${esc(r.pdfName || 'PDF')}</a></p>` : ''}</article>`).join('') || '<p class="mu">The admin has not published any content in this section yet.</p>'}</div>`;
+  box.scrollIntoView({ behavior: 'smooth', block:'start' });
+  const close = box.querySelector('[data-a="close-resources"]'); if (close) close.onclick = () => { box.innerHTML = ''; };
+}
 /* ---------- lobby / instructions ---------- */
 function payBanner() {
   const p = me.pay; if (!p.enabled) return '';

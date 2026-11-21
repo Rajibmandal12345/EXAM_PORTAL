@@ -5,14 +5,16 @@ const QRCode = require('qrcode');
 const cfg = require('./config');
 const PUB = path.join(__dirname, 'public');
 const DBF = path.join(cfg.DATA_DIR, 'db.json');
+const RESOURCE_DIR = path.join(cfg.DATA_DIR, 'uploads');
 fs.mkdirSync(cfg.DATA_DIR, { recursive: true });
+fs.mkdirSync(RESOURCE_DIR, { recursive: true });
 
 /* ---------------- database (in memory, saved to data/db.json) ---------------- */
 const defaults = () => ({
   settings: { title: 'WBJEE Mock Test', status: 'draft', durationMin: 180, showScore: false,
     marking: { 1: { marks: 1, neg: 0.25 }, 2: { marks: 2, neg: 0.5 }, 3: { marks: 2, neg: 0 } },
     payment: { enabled: false, fee: 0, mode: 'manual' } },
-  questions: [], nextQ: 1, students: {}, passkeys: []
+  questions: [], nextQ: 1, students: {}, passkeys: [], resources: []
 });
 let db = defaults();
 if (fs.existsSync(DBF)) {
@@ -60,6 +62,37 @@ const num = (v, min, max, name) => { v = Number(v); if (!Number.isFinite(v) || v
 const r2 = x => Math.round(x * 100) / 100;
 const dl = s => s.startedAt + db.settings.durationMin * 60000;
 const text = (v, name, max = 80, min = 2) => { v = String(v == null ? '' : v).replace(/\s+/g, ' ').trim(); if (v.length < min || v.length > max) throw E(400, name + ' is required (' + min + '-' + max + ' characters)'); return v; };
+const RESOURCE_CATEGORIES = {
+  study: 'Study Guidelines & Materials',
+  admission: 'After WBJEE Admission Guidelines',
+  careers: 'Engineering Streams & Benefits'
+};
+const MAX_RESOURCE_PDF = 5 * 1024 * 1024;
+function cleanResource(b, old) {
+  if (!Object.hasOwn(RESOURCE_CATEGORIES, b.category)) throw E(400, 'Choose a valid resource category.');
+  const title = text(b.title, 'Title', 100);
+  const content = String(b.content || '').trim();
+  if (content.length > 12000) throw E(400, 'Resource text must be 12,000 characters or fewer.');
+  let link = String(b.link || '').trim();
+  if (link) {
+    try { const u = new URL(link); if (!['http:', 'https:'].includes(u.protocol)) throw new Error(); }
+    catch (e) { throw E(400, 'Link must be a valid HTTP or HTTPS URL.'); }
+  }
+  let pdfFile = old && old.pdfFile && !b.removePdf ? old.pdfFile : null;
+  let pdfName = old && old.pdfName && !b.removePdf ? old.pdfName : null;
+  if (b.pdfData != null && b.pdfData !== '') {
+    if (typeof b.pdfData !== 'string' || b.pdfData.length > Math.ceil(MAX_RESOURCE_PDF * 4 / 3) + 8 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(b.pdfData)) throw E(400, 'PDF must be a valid file no larger than 5 MB.');
+    const bytes = Buffer.from(b.pdfData, 'base64');
+    if (bytes.length > MAX_RESOURCE_PDF || bytes.length < 5 || bytes.subarray(0, 5).toString() !== '%PDF-') throw E(400, 'Only valid PDF files up to 5 MB can be uploaded.');
+    const original = text(b.pdfName || 'study-material.pdf', 'PDF filename', 120, 1).replace(/[<>:"/\\|?*\x00-\x1f]/g, '_');
+    pdfFile = rand() + '.pdf';
+    pdfName = original.toLowerCase().endsWith('.pdf') ? original : original + '.pdf';
+    fs.writeFileSync(path.join(RESOURCE_DIR, pdfFile), bytes, { flag: 'wx' });
+  }
+  if (!content && !link && !pdfFile) throw E(400, 'Add text, a link, or a PDF before saving.');
+  return { category: b.category, title, content, link, pdfFile, pdfName };
+}
+const publicResource = r => ({ id: r.id, category: r.category, title: r.title, content: r.content, link: r.link, pdfName: r.pdfName, pdfUrl: r.pdfFile ? '/api/resources/files/' + encodeURIComponent(r.pdfFile) : null, updatedAt: r.updatedAt });
 
 /* ---------------- questions ---------------- */
 const SUBJ = { maths: 'Mathematics', math: 'Mathematics', mathematics: 'Mathematics', physics: 'Physics', phy: 'Physics', chemistry: 'Chemistry', chem: 'Chemistry' };
@@ -160,6 +193,17 @@ setInterval(() => { const n = Date.now(); for (const [k, v] of sessions) if (v <
 async function studentApi(req, res, p, m) {
   const key = m + ' ' + p, b = m === 'POST' ? await readBody(req) : {};
   if (key === 'GET /api/public') return send(res, 200, { title: db.settings.title, status: db.settings.status, payment: { enabled: payOn(), fee: db.settings.payment.fee, mode: db.settings.payment.mode } });
+  if (key === 'GET /api/resources') return send(res, 200, { categories: RESOURCE_CATEGORIES, resources: db.resources.map(publicResource) });
+  const fileMatch = m === 'GET' && p.match(/^\/api\/resources\/files\/([a-f0-9]{36}\.pdf)$/);
+  if (fileMatch) {
+    const resource = db.resources.find(r => r.pdfFile === fileMatch[1]);
+    if (!resource) throw E(404, 'Resource file not found.');
+    const file = path.join(RESOURCE_DIR, resource.pdfFile);
+    if (!fs.existsSync(file)) throw E(404, 'Resource file is unavailable.');
+    const filename = encodeURIComponent(resource.pdfName || 'study-material.pdf');
+    res.writeHead(200, { 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename*=UTF-8\'\'' + filename, 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store' });
+    return fs.createReadStream(file).pipe(res);
+  }
   if (key === 'POST /api/register') {
     const name = text(b.name, 'Name', 60), father = text(b.father, "Father's name", 60), school = text(b.school, 'School name', 100);
     const phone = String(b.phone || '').replace(/\D/g, '').slice(-10); if (!/^[6-9]\d{9}$/.test(phone)) throw E(400, 'Enter a valid 10-digit mobile number');
@@ -203,7 +247,7 @@ async function studentApi(req, res, p, m) {
 }
 
 /* ---------------- admin API ---------------- */
-function needAdmin(req) { const t = (req.headers.authorization || '').replace(/^Bearer /, ''), e = sessions.get(t); if (!e || e < Date.now()) throw E(401, 'Please log in as admin.'); }
+function needAdmin(req) { const t = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim(); const e = sessions.get(t); if (!e || e < Date.now()) throw E(401, 'Please log in as admin.'); }
 function studentRows() {
   return Object.values(db.students).map(s => ({
     phone: s.phone, name: s.name, father: s.father, school: s.school,
@@ -238,6 +282,21 @@ async function adminApi(req, res, p, m, u) {
   }
   needAdmin(req);
   const key = m + ' ' + p, qm = p.match(/^\/api\/admin\/questions\/(\d+)$/);
+  const rm = p.match(/^\/api\/admin\/resources\/([a-f0-9]{36})$/);
+  if (rm) {
+    const i = db.resources.findIndex(r => r.id === rm[1]);
+    if (i < 0) throw E(404, 'Resource not found.');
+    const old = db.resources[i];
+    if (m === 'DELETE') {
+      if (old.pdfFile && fs.existsSync(path.join(RESOURCE_DIR, old.pdfFile))) fs.unlinkSync(path.join(RESOURCE_DIR, old.pdfFile));
+      db.resources.splice(i, 1); save(); return send(res, 200, { ok: true });
+    }
+    if (m === 'PUT') {
+      const clean = cleanResource(b, old);
+      if (old.pdfFile && clean.pdfFile !== old.pdfFile && fs.existsSync(path.join(RESOURCE_DIR, old.pdfFile))) fs.unlinkSync(path.join(RESOURCE_DIR, old.pdfFile));
+      db.resources[i] = { ...old, ...clean, updatedAt: Date.now() }; save(); return send(res, 200, { ok: true });
+    }
+  }
   if (qm) {
     const id = Number(qm[1]), q = qById.get(id); if (!q) throw E(404, 'Question not found');
     lockQ();
@@ -277,6 +336,11 @@ async function adminApi(req, res, p, m, u) {
     case 'POST /api/admin/extend': db.settings.durationMin = num(db.settings.durationMin + Number(b.minutes), 1, 600, 'Duration'); save(); return send(res, 200, { ok: true });
     case 'POST /api/admin/forcesubmit': for (const s of Object.values(db.students)) if (s.startedAt && !s.submitted) submitStudent(s); return send(res, 200, { ok: true });
     case 'GET /api/admin/questions': return send(res, 200, { questions: db.questions });
+    case 'GET /api/admin/resources': return send(res, 200, { categories: RESOURCE_CATEGORIES, resources: db.resources.map(publicResource) });
+    case 'POST /api/admin/resources': {
+      const clean = cleanResource(b);
+      db.resources.push({ id: rand(), ...clean, updatedAt: Date.now() }); save(); return send(res, 201, { ok: true });
+    }
     case 'POST /api/admin/questions': lockQ(); addQs(Array.isArray(b) ? b.map(cleanQ) : [cleanQ(b)]); return send(res, 200, { ok: true });
     case 'POST /api/admin/import': { lockQ(); const r = parseImport(b.text, b.subject || 'Mathematics', b.type || 1); addQs(r.good); return send(res, 200, { added: r.good.length, skipped: r.bad }); }
     case 'POST /api/admin/sample': { lockQ(); const r = parseImport(fs.readFileSync(path.join(__dirname, 'sample-questions.txt'), 'utf8'), 'Mathematics', 1); addQs(r.good); return send(res, 200, { added: r.good.length }); }
